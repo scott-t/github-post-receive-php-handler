@@ -6,7 +6,7 @@
  * @version 0.1 (updated 31-May-2009 @ 06:01 PDT)
  */
 
-define('SEND_HTML_EMAIL', true);
+define('SEND_HTML_EMAIL', false);
 define('SEND_DIFF', true);
 
 define('EMAIL_FROM', 'noreply@yuba.stanford.edu');
@@ -87,7 +87,7 @@ function mail_github_post_receive($to, $subj_header, $github_json) {
             HTML_P  . 'Commit: ' . make_url($url, $id, false) .
             HTML_BR . "Author: $author_name (" . make_url($author_email, $author_email, true) . ')' .
             HTML_BR . "Date: $date" .
-            HTML_BLOCKQUOTE . str_replace("\n", "<br/>", $msg . "\n\n" . github_get_diff($repo_owner, $repo, $id)) . HTML_BLOCKQUOTE_END . HTML_P_END;
+            HTML_BLOCKQUOTE . str_replace("\n", HTML_BR, $msg . "\n\n" . github_get_diff($repo_owner, $repo, $id)) . HTML_BLOCKQUOTE_END . HTML_P_END;
     }
 
     // create a list of aggregate additions/deletions/modifications
