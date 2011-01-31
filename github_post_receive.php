@@ -86,13 +86,11 @@ function mail_github_post_receive($to, $subj_header, $github_json) {
             }
         }
 
-        if(!SEND_HTML_EMAIL) {
-            $msg = "\n$msg";
-        }
-
-        if(SEND_DIFF) {
+        if(SEND_DIFF)
             $msg = "Commit Message:\n$msg";
-        }
+
+        if(!SEND_HTML_EMAIL)
+            $msg = "\n$msg";
 
         $commits .=
             HTML_P  . 'Commit: ' . make_url($url, $id, false) .
