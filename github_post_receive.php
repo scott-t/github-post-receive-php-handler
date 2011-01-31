@@ -9,7 +9,7 @@
 define('SEND_HTML_EMAIL', false);
 define('SEND_DIFF', true);
 
-define('EMAIL_FROM', 'noreply@yuba.stanford.edu');
+define('EMAIL_FROM', 'noreply@example.com');
 
 // some constants for HTML tags
 define('HTML_HEADER',         SEND_HTML_EMAIL ? '<html><body>' : '');

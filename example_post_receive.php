@@ -2,7 +2,7 @@
 
 // two ways to address the email
 // option 1) manually set the list
-$email_to = "dgu@cs.stanford.edu";
+$email_to = "example@example.org";
 
 // option 2) use the list maintainer so people can sign-up for the list (and
 // leave) on their own (recommended)
@@ -25,7 +25,7 @@ $json = <<<JSON
     "forks": 2,
     "private": 1,
     "owner": {
-      "email": "chris@ozmm.org",
+      "email": "",
       "name": "defunkt"
     }
   },
@@ -34,7 +34,7 @@ $json = <<<JSON
       "id": "41a212ee83ca127e3c8cf465891ab7216a705f59",
       "url": "http://github.com/defunkt/github/commit/41a212ee83ca127e3c8cf465891ab7216a705f59",
       "author": {
-        "email": "chris@ozmm.org",
+        "email": "",
         "name": "Chris Wanstrath"
       },
       "message": "okay i give in",
@@ -45,7 +45,7 @@ $json = <<<JSON
       "id": "de8251ff97ee194a289832576287d6f8ad74e3d0",
       "url": "http://github.com/defunkt/github/commit/de8251ff97ee194a289832576287d6f8ad74e3d0",
       "author": {
-        "email": "chris@ozmm.org",
+        "email": "",
         "name": "Chris Wanstrath"
       },
       "message": "update pricing a tad",
