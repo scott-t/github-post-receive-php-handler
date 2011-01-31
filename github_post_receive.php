@@ -6,7 +6,9 @@
  * @version 0.1 (updated 31-May-2009 @ 06:01 PDT)
  */
 
-define('SEND_HTML_EMAIL', true);
+define('SEND_HTML_EMAIL', false);
+
+define('EMAIL_FROM', 'noreply@yuba.stanford.edu');
 
 // some constants for HTML tags
 define('HTML_HEADER',         SEND_HTML_EMAIL ? '<html><body>' : '');
@@ -87,7 +89,7 @@ function mail_github_post_receive($to, $subj_header, $github_json) {
     $changes = array("Additions"=>$added, "Deletions"=>$deleted, "Modifications"=>$modified);
     $changes_txt = '';
     foreach($changes as $what => $what_list) {
-        if(count($what_list) > 0) {
+         if(count($what_list) > 0) {
             $changes_txt .= HTML_BR . "$what:" . HTML_BR;
             $items = array_unique($what_list);
             sort($items);
@@ -111,7 +113,7 @@ function mail_github_post_receive($to, $subj_header, $github_json) {
         HTML_FOOTER;
 
     // build the mail headers
-    $headers = "From: noreply@yuba.stanford.edu ($subj_header Mailer)\r\n";
+    $headers = "From: " . EMAIL_FROM . " ($subj_header Mailer)\r\n";
     if(SEND_HTML_EMAIL)
         $headers .= "MIME-Version: 1.0\r\n" .
                     "Content-type: text/html\r\n";
