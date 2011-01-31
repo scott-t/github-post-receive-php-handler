@@ -8,6 +8,7 @@
 
 define('SEND_HTML_EMAIL', false);
 define('SEND_DIFF', true);
+define('SHOW_AGGREGATE', false); // For the moment, this should be !SEND_DIFF
 
 define('EMAIL_FROM', 'noreply@example.com');
 
@@ -73,14 +74,24 @@ function mail_github_post_receive($to, $subj_header, $github_json) {
         $msg = $commit->{'message'};
         $date = $commit->{'timestamp'};
 
-        if(isset($commit->{'added'})) {
-            $added = array_merge($added, $commit->{'added'});
+        if(SHOW_AGGREGATE) {
+            if(isset($commit->{'added'})) {
+                $added = array_merge($added, $commit->{'added'});
+            }
+            if(isset($commit->{'deleted'})) {
+                $deleted = array_merge($deleted, $commit->{'deleted'});
+            }
+            if(isset($commit->{'modified'})) {
+                $modified = array_merge($modified, $commit->{'modified'});
+            }
         }
-        if(isset($commit->{'deleted'})) {
-            $deleted = array_merge($deleted, $commit->{'deleted'});
+
+        if(!SEND_HTML_EMAIL) {
+            $msg = "\n$msg";
         }
-        if(isset($commit->{'modified'})) {
-            $modified = array_merge($modified, $commit->{'modified'});
+
+        if(SHOW_DIFF) {
+            $msg = "Commit Message:\n$msg";
         }
 
         $commits .=
@@ -124,10 +135,10 @@ function mail_github_post_receive($to, $subj_header, $github_json) {
                     "Content-type: text/html\r\n";
 
     // send the mail
-    if(false)//!mail($to, $subj, $body, $headers))
+    if(!mail($to, $subj, $body, $headers))
         error_log("failed to email github info to '$to' ($subj, $body)");
     else {
-        $body = str_replace("\n", '<br/>', $body);
+        $body = str_replace("\n", "<br/>", $body);
         echo "$to<br/>$subj<br/>$body<br/>";
     }
 }
@@ -145,22 +156,31 @@ function github_get_diff($repo_owner, $repo, $commit)
 
     $ret = '';
 
-/*    if (count($json->{'commit'}->{'added'}) > 0) {
-        $ret = "Added:\n";
-        foreach($json->{'commit'}->{'added'} as $add)
-            $ret .= "  $add\n";
+    if(!SHOW_AGGREGATE) {
+        $ret = "Changed paths:\n";
+        if (count($json->{'commit'}->{'added'}) > 0) {
+            foreach($json->{'commit'}->{'added'} as $add)
+                $ret .= "  A $add\n";
+        }
+
+        if (count($json->{'commit'}->{'removed'}) > 0) {
+            foreach($json->{'commit'}->{'removed'} as $rem)
+                $ret .= "  R $rem\n";
+        }
     }
 
-    if (count($json->{'commit'}->{'removed'}) > 0) {
-        $ret = "Removed:\n";
-        foreach($json->{'commit'}->{'removed'} as $rem)
-            $ret .= "  $rem\n";
-    }
-*/
     if (count($json->{'commit'}->{'modified'}) > 0) {
-        $ret = "Modification diffs:\n";
-        foreach($json->{'commit'}->{'modified'} as $mod)
-            $ret .= "==========================\n" . $mod->{'diff'} . "\n\n";
+        if(!SHOW_AGGREGATE) {
+            foreach($json->{'commit'}->{'modified'} as $mod)
+                $ret .= "    " . $mod->{'filename'} . "\n";
+        }
+
+        $ret .= "\n";
+
+        foreach($json->{'commit'}->{'modified'} as $mod) {
+            $ret .= "Modified: " . $mod->{'filename'} . "\n" .
+                    "===================================================================\n" . $mod->{'diff'} . "\n\n";
+        }
     }
 
 
