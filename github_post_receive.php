@@ -6,7 +6,8 @@
  * @version 0.1 (updated 31-May-2009 @ 06:01 PDT)
  */
 
-define('SEND_HTML_EMAIL', false);
+define('SEND_HTML_EMAIL', true);
+define('SEND_DIFF', true);
 
 define('EMAIL_FROM', 'noreply@yuba.stanford.edu');
 
@@ -54,6 +55,10 @@ function mail_github_post_receive($to, $subj_header, $github_json) {
     $last_commit = $obj->{'after'};
     $subj = "$subj_header $branch -> $last_commit";
 
+    // repo details for diff
+    $repo_owner = $obj->{'repository'}->{'owner'}->{'name'};
+    $repo = $obj->{'repository'}->{'name'};
+
     // extract information about each commit
     $commits = '';
     $added = array();
@@ -82,7 +87,7 @@ function mail_github_post_receive($to, $subj_header, $github_json) {
             HTML_P  . 'Commit: ' . make_url($url, $id, false) .
             HTML_BR . "Author: $author_name (" . make_url($author_email, $author_email, true) . ')' .
             HTML_BR . "Date: $date" .
-            HTML_BLOCKQUOTE . str_replace("\n", '<br/>', $msg) . HTML_BLOCKQUOTE_END . HTML_P_END;
+            HTML_BLOCKQUOTE . str_replace("\n", "<br/>", $msg . "\n\n" . github_get_diff($repo_owner, $repo, $id)) . HTML_BLOCKQUOTE_END . HTML_P_END;
     }
 
     // create a list of aggregate additions/deletions/modifications
@@ -119,12 +124,47 @@ function mail_github_post_receive($to, $subj_header, $github_json) {
                     "Content-type: text/html\r\n";
 
     // send the mail
-    if(!mail($to, $subj, $body, $headers))
+    if(false)//!mail($to, $subj, $body, $headers))
         error_log("failed to email github info to '$to' ($subj, $body)");
     else {
         $body = str_replace("\n", '<br/>', $body);
         echo "$to<br/>$subj<br/>$body<br/>";
     }
+}
+
+function github_get_diff($repo_owner, $repo, $commit)
+{
+    if (SEND_DIFF == false)
+        return '';
+
+    $json = file_get_contents("http://github.com/api/v2/json/commits/show/$repo_owner/$repo/$commit");
+
+    $json = json_decode($json);
+    if ($json == null)
+        return '*bad json when retrieving commit diff*';
+
+    $ret = '';
+
+/*    if (count($json->{'commit'}->{'added'}) > 0) {
+        $ret = "Added:\n";
+        foreach($json->{'commit'}->{'added'} as $add)
+            $ret .= "  $add\n";
+    }
+
+    if (count($json->{'commit'}->{'removed'}) > 0) {
+        $ret = "Removed:\n";
+        foreach($json->{'commit'}->{'removed'} as $rem)
+            $ret .= "  $rem\n";
+    }
+*/
+    if (count($json->{'commit'}->{'modified'}) > 0) {
+        $ret = "Modification diffs:\n";
+        foreach($json->{'commit'}->{'modified'} as $mod)
+            $ret .= "==========================\n" . $mod->{'diff'} . "\n\n";
+    }
+
+
+    return $ret;
 }
 
 ?>
