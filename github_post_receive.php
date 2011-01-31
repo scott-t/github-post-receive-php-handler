@@ -90,7 +90,7 @@ function mail_github_post_receive($to, $subj_header, $github_json) {
             $msg = "\n$msg";
         }
 
-        if(SHOW_DIFF) {
+        if(SEND_DIFF) {
             $msg = "Commit Message:\n$msg";
         }
 
@@ -158,18 +158,18 @@ function github_get_diff($repo_owner, $repo, $commit)
 
     if(!SHOW_AGGREGATE) {
         $ret = "Changed paths:\n";
-        if (count($json->{'commit'}->{'added'}) > 0) {
+        if (isset($json->{'commit'}->{'added'}) && count($json->{'commit'}->{'added'}) > 0) {
             foreach($json->{'commit'}->{'added'} as $add)
                 $ret .= "  A $add\n";
         }
 
-        if (count($json->{'commit'}->{'removed'}) > 0) {
+        if (isset($json->{'commit'}->{'removed'}) && count($json->{'commit'}->{'removed'}) > 0) {
             foreach($json->{'commit'}->{'removed'} as $rem)
                 $ret .= "  R $rem\n";
         }
     }
 
-    if (count($json->{'commit'}->{'modified'}) > 0) {
+    if (isset($json->{'commit'}->{'modified'}) && count($json->{'commit'}->{'modified'}) > 0) {
         if(!SHOW_AGGREGATE) {
             foreach($json->{'commit'}->{'modified'} as $mod)
                 $ret .= "    " . $mod->{'filename'} . "\n";
