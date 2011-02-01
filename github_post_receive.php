@@ -6,9 +6,11 @@
  * @version 0.1 (updated 31-May-2009 @ 06:01 PDT)
  */
 
-define('SEND_HTML_EMAIL', false);
-define('SEND_DIFF', true);
-define('SHOW_AGGREGATE', false); // For the moment, this should be !SEND_DIFF
+define('SEND_HTML_EMAIL', false); // HTML or plaintext?
+define('SEND_DIFF', true);        // Add a diff of the changes?
+define('SHOW_AGGREGATE', false);  // Aggregate the files changed list at the end of the email
+                                  // (not recommended if send_diff set)
+define('USE_LOCAL', false);       // Use a local git repo instead of the github API
 
 define('EMAIL_FROM', 'noreply@example.com');
 
@@ -85,20 +87,20 @@ function mail_github_post_receive($to, $subj_header, $github_json) {
                 $modified = array_merge($modified, $commit->{'modified'});
             }
         } else {
-            $ret = "Changed paths:\n";
+            $paths = "Changed paths:\n";
             if (isset($commit->{'added'}) && count($commit->{'added'}) > 0) {
                 foreach($commit->{'added'} as $add)
-                    $ret .= "  A $add\n";
+                    $paths .= "  A $add\n";
             }
 
             if (isset($commit->{'removed'}) && count($commit->{'removed'}) > 0) {
                 foreach($commit->{'removed'} as $rem)
-                    $ret .= "  R $rem\n";
+                    $paths .= "  R $rem\n";
             }
 
             if (isset($commit->{'modified'}) && count($commit->{'modified'}) > 0) {
                 foreach($commit->{'modified'} as $mod)
-                    $ret .= "    $mod\n";
+                    $paths .= "    $mod\n";
            }
         }
 
@@ -109,18 +111,25 @@ function mail_github_post_receive($to, $subj_header, $github_json) {
         if(!SEND_HTML_EMAIL)
             $msg = "\n$msg";
 
+        if(!SHOW_AGGREGATE)
+            $msg = "$msg\n\n$paths";
+
         $commits .=
             HTML_P  . 'Commit: ' . $id .
-            HTML_BR . "    $url" . 
+            HTML_BR . "    $url" .
             HTML_BR . "Author: $author_name (" . make_url($author_email, $author_email, true) . ')' .
             HTML_BR . "Date: $date" .
-            HTML_BLOCKQUOTE . str_replace("\n", HTML_BR, $msg . "\n\n" . github_get_diff($repo_owner, $repo, $id)) . HTML_BLOCKQUOTE_END . HTML_P_END;
+            HTML_BLOCKQUOTE . 
+                str_replace("\n", HTML_BR, $msg . "\n\n" . 
+                    (SEND_HTML_EMAIL ? 
+                        htmlentities(github_get_diff($repo_owner, $repo, $id)) : 
+                        github_get_diff($repo_owner, $repo, $id))) . HTML_BLOCKQUOTE_END . HTML_P_END;
     }
 
     // create a list of aggregate additions/deletions/modifications
+    $changes_txt = '';
     if(SHOW_AGGREGATE) {
         $changes = array("Additions"=>$added, "Deletions"=>$deleted, "Modifications"=>$modified);
-        $changes_txt = '';
         foreach($changes as $what => $what_list) {
              if(count($what_list) > 0) {
                 $changes_txt .= HTML_BR . "$what:" . HTML_BR;
@@ -166,22 +175,28 @@ function github_get_diff($repo_owner, $repo, $commit)
     if (SEND_DIFF == false)
         return '';
 
-    $json = file_get_contents("http://github.com/api/v2/json/commits/show/$repo_owner/$repo/$commit");
-
-    $json = json_decode($json);
-    if ($json == null)
-        return '*bad json when retrieving commit diff*';
-
     $ret = '';
+    if (!USE_LOCAL) {
+        $json = file_get_contents("http://github.com/api/v2/json/commits/show/$repo_owner/$repo/$commit");
 
-    if (isset($json->{'commit'}->{'modified'}) && count($json->{'commit'}->{'modified'}) > 0) {
+        $json = json_decode($json);
+        if ($json == null)
+            return '*bad json when retrieving commit diff*';
 
-        foreach($json->{'commit'}->{'modified'} as $mod) {
-            $ret .= "Modified: " . $mod->{'filename'} . "\n" .
-                    "===================================================================\n" . $mod->{'diff'} . "\n\n";
+        if (isset($json->{'commit'}->{'modified'}) && count($json->{'commit'}->{'modified'}) > 0) {
+            foreach($json->{'commit'}->{'modified'} as $mod) {
+                $ret .= "Modified: " . $mod->{'filename'} . "\n" .
+                        "===================================================================\n" . $mod->{'diff'} . "\n\n";
+            }
+        }
+    } else {
+        if (preg_match('/^[0-9a-f]+$/', $commit)) {
+            ob_start();
+            passthru('./diff_local.sh ' . escapeshellarg($commit));
+            $ret = ob_get_contents();
+            ob_end_clean();
         }
     }
-
 
     return $ret;
 }
