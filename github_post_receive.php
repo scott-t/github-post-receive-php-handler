@@ -84,7 +84,24 @@ function mail_github_post_receive($to, $subj_header, $github_json) {
             if(isset($commit->{'modified'})) {
                 $modified = array_merge($modified, $commit->{'modified'});
             }
+        } else {
+            $ret = "Changed paths:\n";
+            if (isset($commit->{'added'}) && count($commit->{'added'}) > 0) {
+                foreach($commit->{'added'} as $add)
+                    $ret .= "  A $add\n";
+            }
+
+            if (isset($commit->{'removed'}) && count($commit->{'removed'}) > 0) {
+                foreach($commit->{'removed'} as $rem)
+                    $ret .= "  R $rem\n";
+            }
+
+            if (isset($commit->{'modified'}) && count($commit->{'modified'}) > 0) {
+                foreach($commit->{'modified'} as $mod)
+                    $ret .= "    $mod\n";
+           }
         }
+
 
         if(SEND_DIFF)
             $msg = "Commit Message:\n$msg";
@@ -93,22 +110,25 @@ function mail_github_post_receive($to, $subj_header, $github_json) {
             $msg = "\n$msg";
 
         $commits .=
-            HTML_P  . 'Commit: ' . make_url($url, $id, false) .
+            HTML_P  . 'Commit: ' . $id .
+            HTML_BR . "    $url" . 
             HTML_BR . "Author: $author_name (" . make_url($author_email, $author_email, true) . ')' .
             HTML_BR . "Date: $date" .
             HTML_BLOCKQUOTE . str_replace("\n", HTML_BR, $msg . "\n\n" . github_get_diff($repo_owner, $repo, $id)) . HTML_BLOCKQUOTE_END . HTML_P_END;
     }
 
     // create a list of aggregate additions/deletions/modifications
-    $changes = array("Additions"=>$added, "Deletions"=>$deleted, "Modifications"=>$modified);
-    $changes_txt = '';
-    foreach($changes as $what => $what_list) {
-         if(count($what_list) > 0) {
-            $changes_txt .= HTML_BR . "$what:" . HTML_BR;
-            $items = array_unique($what_list);
-            sort($items);
-            foreach($items as $item) {
-                $changes_txt .= " -- $item" . HTML_BR;
+    if(SHOW_AGGREGATE) {
+        $changes = array("Additions"=>$added, "Deletions"=>$deleted, "Modifications"=>$modified);
+        $changes_txt = '';
+        foreach($changes as $what => $what_list) {
+             if(count($what_list) > 0) {
+                $changes_txt .= HTML_BR . "$what:" . HTML_BR;
+                $items = array_unique($what_list);
+                sort($items);
+                foreach($items as $item) {
+                    $changes_txt .= " -- $item" . HTML_BR;
+                }
             }
         }
     }
@@ -127,7 +147,7 @@ function mail_github_post_receive($to, $subj_header, $github_json) {
         HTML_FOOTER;
 
     // build the mail headers
-    $headers = "From: " . EMAIL_FROM . " ($subj_header Mailer)\r\n";
+    $headers = "From: " . EMAIL_FROM . " (GIT diff mailer)\r\n";
     if(SEND_HTML_EMAIL)
         $headers .= "MIME-Version: 1.0\r\n" .
                     "Content-type: text/html\r\n";
@@ -154,26 +174,7 @@ function github_get_diff($repo_owner, $repo, $commit)
 
     $ret = '';
 
-    if(!SHOW_AGGREGATE) {
-        $ret = "Changed paths:\n";
-        if (isset($json->{'commit'}->{'added'}) && count($json->{'commit'}->{'added'}) > 0) {
-            foreach($json->{'commit'}->{'added'} as $add)
-                $ret .= "  A $add\n";
-        }
-
-        if (isset($json->{'commit'}->{'removed'}) && count($json->{'commit'}->{'removed'}) > 0) {
-            foreach($json->{'commit'}->{'removed'} as $rem)
-                $ret .= "  R $rem\n";
-        }
-    }
-
     if (isset($json->{'commit'}->{'modified'}) && count($json->{'commit'}->{'modified'}) > 0) {
-        if(!SHOW_AGGREGATE) {
-            foreach($json->{'commit'}->{'modified'} as $mod)
-                $ret .= "    " . $mod->{'filename'} . "\n";
-        }
-
-        $ret .= "\n";
 
         foreach($json->{'commit'}->{'modified'} as $mod) {
             $ret .= "Modified: " . $mod->{'filename'} . "\n" .
